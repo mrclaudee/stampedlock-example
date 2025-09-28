@@ -13,7 +13,7 @@ public class BankAccount {
             balance += amount;
             System.out.println(Thread.currentThread().getName() + " new balance: " + balance);
         } finally {
-            lock.unlockRead(stamp);
+            lock.unlockWrite(stamp);
         }
     }
 
@@ -28,7 +28,7 @@ public class BankAccount {
                 System.out.println(Thread.currentThread().getName() + " withdrew:" + amount + ", Insufficient balance");
             }
         } finally {
-            lock.unlockRead(stamp);
+            lock.unlockWrite(stamp);
         }
     }
 
