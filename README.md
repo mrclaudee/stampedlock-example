@@ -1,44 +1,148 @@
-# Démonstration de StampedLock en Java
+# StampedLock Banking System
 
-## Description du projet
+Une implémentation avancée d'un système bancaire multi-threadé utilisant `StampedLock` pour optimiser les performances de lecture avec la lecture optimiste, tout en garantissant la sécurité des transactions concurrentes.
 
-Ce projet démontre l'utilisation de `StampedLock`, une fonctionnalité avancée de gestion de concurrence introduite dans Java 8. Il implémente un système simple de gestion de compte bancaire avec des opérations concurrentes de dépôt, retrait et consultation du solde.
+## 🎯 Concepts utilisés
 
-## Concepts démontrés
+### **StampedLock (Java 8+)**
+- **Write Lock** : Verrouillage exclusif pour les opérations de modification (deposit/withdraw)
+- **Read Lock** : Verrouillage partagé pour les lectures standard
+- **Optimistic Read** : Lecture non-bloquante avec validation pour maximiser les performances
 
-### 1. Gestion de la concurrence avec StampedLock
+### **Stratégies de verrouillage**
+- **Lecture optimiste** : `tryOptimisticRead()` + `validate()` pour éviter le verrouillage quand possible
+- **Fallback sécurisé** : Basculement automatique vers read lock si la validation échoue
+- **Exclusion mutuelle** : Write locks pour protéger l'intégrité des données
 
-Le projet illustre trois modes de verrouillage offerts par `StampedLock` :
+### **Gestion des transactions bancaires**
+- **Dépôts thread-safe** : Ajout sécurisé au solde
+- **Retraits avec validation** : Vérification du solde avant débit
+- **Lecture de solde optimisée** : Performance maximale pour les consultations
 
-- **Verrouillage en écriture** : Utilisé pour les opérations de modification (dépôt et retrait) qui nécessitent un accès exclusif.
-- **Verrouillage en lecture** : Utilisé pour les lectures standard qui n'interfèrent pas avec d'autres lectures mais bloquent les écritures.
-- **Lecture optimiste** : Une approche non-bloquante pour les lectures qui vérifie après l'opération si une modification concurrente a eu lieu.
+### **Architecture concurrente**
+- **Multiples threads simultanés** : Dépositaire, retireur, lecteur
+- **Synchronisation fine** : Minimisation des contentions entre threads
+- **Performance optimisée** : Lectures concurrentes non-bloquantes quand possible
 
-### 2. Programmation multithreads
+## 🏗️ Architecture
 
-Le projet démontre :
-- La création et gestion de threads parallèles
-- La synchronisation de tâches concurrentes
-- La gestion des opérations bloquantes et non-bloquantes
-- L'attente de la fin d'exécution des threads avec `join()`
+```
+BankAccount (Ressource partagée)
+├── balance (double) - Solde protégé
+├── StampedLock - Mécanisme de verrouillage avancé
+├── deposit() - Write lock exclusif
+├── withdraw() - Write lock avec validation métier
+├── getBalanceOptimistic() - Lecture optimiste + fallback
+└── getBalance() - Lecture classique avec read lock
 
-### 3. Bonnes pratiques de gestion des exceptions
+StampedLockExampleTest
+├── Depositor Thread - 3 dépôts de 100€
+├── Withdrawer Thread - 3 retraits de 50€
+├── Reader Thread - 3 lectures optimistes
+└── Synchronisation avec join()
+```
 
-Le code illustre :
-- La capture et le traitement approprié des `InterruptedException`
-- L'utilisation systématique de blocs `try-finally` pour garantir la libération des verrous
+## 🚀 Installation et exécution
 
-## Structure du projet
+### Prérequis
+- Java JDK 8 ou supérieur (StampedLock introduit en Java 8)
+- Un terminal
 
-- `BankAccount.java` : Implémentation d'un compte bancaire utilisant `StampedLock` pour gérer la concurrence
-- `StampedLockExampleTest.java` : Classe principale qui démontre l'utilisation concurrente du compte bancaire
+### Compilation
+```bash
+javac locking/*.java
+```
 
-## Avantages démontrés de StampedLock par rapport aux autres mécanismes de verrouillage
+### Exécution
 
-- **Performance améliorée** : Les lectures optimistes permettent un débit plus élevé dans les scénarios à forte lecture
-- **Flexibilité** : Offre trois modes de verrouillage différents selon les besoins (écriture, lecture, optimiste)
-- **Évolutivité** : Fonctionne efficacement sous forte charge avec de nombreux threads
+```bash
+java locking.StampedLockExampleTest
+```
 
-## Comment exécuter le projet
+## 📝 Comportement observé
 
-Exécutez la classe `StampedLockExampleTest` pour voir les opérations concurrentes en action.
+### Exemple de sortie typique
+
+```
+Depositor depositing: 100.0
+Depositor new balance: 100.0
+Reader reading balance: 100.0
+Withdrawer withdrew: 50.0, New balance: 50.0
+Depositor depositing: 100.0
+Depositor new balance: 150.0
+Reader reading balance: 150.0
+Withdrawer withdrew: 50.0, New balance: 100.0
+Depositor depositing: 100.0
+Depositor new balance: 200.0
+Withdrawer withdrew: 50.0, New balance: 150.0
+Reader reading balance: 150.0
+Final Balance: 150.0
+```
+
+### Scénarios de verrouillage
+
+**Lecture optimiste réussie :**
+- `tryOptimisticRead()` obtient un stamp
+- Lecture du solde sans blocage
+- `validate()` confirme - pas de write concurrent
+
+**Lecture optimiste échouée :**
+- `tryOptimisticRead()` obtient un stamp
+- Write concurrent invalide le stamp
+- Fallback automatique vers `readLock()`
+
+## 🔧 Fonctionnalités
+
+- **Dépôts sécurisés** : Ajout thread-safe au solde avec write lock
+- **Retraits validés** : Vérification du solde suffisant avant débit
+- **Lectures optimisées** : Performance maximale avec lecture optimiste
+- **Fallback automatique** : Basculement transparent vers read lock si nécessaire
+- **Transactions atomiques** : Garantie de cohérence des données
+
+## 📚 Points d'apprentissage
+
+Ce projet illustre parfaitement :
+- **L'utilisation avancée de StampedLock** vs ReentrantReadWriteLock
+- **L'optimisation des performances de lecture** avec la lecture optimiste
+- **La gestion des contentions** dans un système concurrent
+- **Le pattern try-finally** pour la libération des verrous
+- **La validation d'intégrité** avec `validate()`
+- **Les transactions bancaires thread-safe**
+
+## ⚡ Avantages de StampedLock
+
+### Par rapport à synchronized :
+- **Meilleure scalabilité** avec multiple readers
+- **Lectures non-bloquantes** avec optimistic read
+- **Performance supérieure** sous forte charge
+
+### Par rapport à ReentrantReadWriteLock :
+- **Lecture optimiste** évite complètement le verrouillage
+- **Moins de overhead** pour les lectures fréquentes
+- **Meilleur throughput** dans les scénarios read-heavy
+
+## 🎛️ Configuration
+
+Dans `StampedLockExampleTest.java` :
+```java
+Thread.sleep(500L); // Délai entre opérations
+account.deposit(100); // Montant des dépôts
+account.withdraw(50); // Montant des retraits
+```
+
+## 🚀 Extensions possibles
+
+- Ajouter des métriques de performance (temps de lock, contentions)
+- Implémenter un historique des transactions
+- Ajouter la gestion des découverts autorisés
+- Créer plusieurs comptes avec transferts inter-comptes
+- Implémenter un système de notification d'événements
+- Ajouter des tests de charge avec plus de threads
+- Intégrer des timeouts sur les opérations de verrouillage
+
+## ⚠️ Notes importantes
+
+- **StampedLock n'est PAS réentrant** (contrairement à ReentrantReadWriteLock)
+- **Attention aux deadlocks** si mal utilisé
+- **Toujours libérer les verrous** dans un bloc finally
+- **Valider les stamps** pour la lecture optimiste
